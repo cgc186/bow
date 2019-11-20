@@ -18,13 +18,13 @@ using namespace std;
 namespace fs = boost::filesystem;
 using namespace fs;
 
-void train(int _clusters, string dF, string tF, string tempF, string testF, string rF) {
+void train(int _clusters, 
+	string dataFolder, 
+	string trainFolder, 
+	string templateFolder, 
+	string testFolder, 
+	string resultFolder) {
 
-	string dataFolder = dF;
-	string trainFolder = tF;
-	string templateFolder = tempF;
-	string testFolder = testF;
-	string resultFolder = rF;
 
 	//存放所有训练图片的BOW
 	map<string, Mat> allsamples_bow;
@@ -227,7 +227,6 @@ String categoryImage(string trainPicPath,string dataFolder) {
 	float curConfidence;
 
 	//读取图片
-	cout << trainPicPath << endl;
 	Mat input_pic = imread(trainPicPath);
 	cvtColor(input_pic, gray_pic, CV_BGR2GRAY);
 
@@ -283,14 +282,16 @@ String categoryImage(string trainPicPath,string dataFolder) {
 	return prediction_category;
 }
 
-void categoryBySvm(string dataFolder, string testFolder,bool flag) {
+void categoryBySvm(
+	string dataFolder, 
+	string testFolder
+	,string resultFolder,
+	string templateFolder , 
+	int flag) {
 	cout << "物体分类开始..." << endl;
 
 	directory_iterator begin_train(testFolder);
 	directory_iterator end_train;
-
-	string resultFolder = dataFolder + "/result_image/";
-	string templateFolder = dataFolder + "/templates/";
 
 	map<string, Mat> result_objects;
 	directory_iterator begin_iter(templateFolder);
@@ -331,10 +332,11 @@ void categoryBySvm(string dataFolder, string testFolder,bool flag) {
 				imwrite(filename, input_pic);
 			}
 		}
-		cout << "这张图属于： " << prediction_category << endl;
+		cout << "图片地址: " << trainPicPath << endl;
+		cout << "这张图属于: " << prediction_category << endl;
 		//显示输出
-		if (flag) {
-			imshow("输入图片：", input_pic);
+		if (flag == 1) {
+			imshow("输入图片: ", input_pic);
 
 			namedWindow("Dectect Object");
 			
@@ -348,22 +350,15 @@ int main(void) {
 
 	int clusters = 1000;
 
-	string dataFolder = "D:/project data/data/";
-	string trainFolder = "D:/project data/data/train_images/";
-	string templateFolder = "D:/project data/data/templates/";
-	string testFolder = "D:/project data/data/test_image";
-	string resultFolder = "D:/project data/data/result_image/";
-
-
-	//string dataFolder = "data/";
-	//string trainFolder = "data/train_images/";
-	//string templateFolder = "data/templates/";
-	//string testFolder = "data/test_image";
-	//string resultFolder = "data/result_image/";
+	string dataFolder = "data/";
+	string trainFolder = "data/train_images/";
+	string templateFolder = "data/templates/";
+	string testFolder = "data/test_image";
+	string resultFolder = "data/result_image/";
 
 	train(clusters, dataFolder, trainFolder, templateFolder, testFolder, resultFolder);
 
 	//将测试图片分类
-	categoryBySvm(dataFolder, testFolder, true);
+	categoryBySvm(dataFolder, testFolder, resultFolder,templateFolder, 1);
 	return 0;
 }
