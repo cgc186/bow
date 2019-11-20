@@ -207,14 +207,7 @@ void train(int _clusters, string dF, string tF, string tempF, string testF, stri
 	}
 }
 
-void categoryImage(
-	string trainPicName,
-	string trainPicPath,
-	string dataFolder
-) {
-
-	string templateFolder = dataFolder + "/templates/";
-	string resultFolder = dataFolder + "/result_image/";
+String categoryImage(string trainPicPath,string dataFolder) {
 
 	vector<string> category_name;
 	int categoryNameSize = 0;
@@ -229,26 +222,6 @@ void categoryImage(
 	}
 	categoryNameSize = category_name.size();
 
-	map<string, Mat> result_objects;
-
-	directory_iterator begin_iter(templateFolder);
-	directory_iterator end_iter;
-	//获取该目录下的所有文件名
-	for (; begin_iter != end_iter; ++begin_iter) {
-		string imageName = begin_iter->path().filename().string();
-
-		string filename = templateFolder + imageName;
-
-		int last_index = imageName.find_last_of(".");
-		string name = imageName.substr(0, last_index);
-
-		//读入模板图片
-		Mat image = imread(filename);
-		//Mat templ_image;
-		//存储原图模板
-		result_objects[name] = image;
-	}
-
 	Mat gray_pic;
 	string prediction_category;
 	float curConfidence;
@@ -256,7 +229,6 @@ void categoryImage(
 	//读取图片
 	cout << trainPicPath << endl;
 	Mat input_pic = imread(trainPicPath);
-	imshow("输入图片：", input_pic);
 	cvtColor(input_pic, gray_pic, CV_BGR2GRAY);
 
 	// 提取BOW描述子
@@ -270,7 +242,7 @@ void categoryImage(
 	Ptr<FlannBasedMatcher> descriptorMacher = new FlannBasedMatcher();
 	Ptr<BOWImgDescriptorExtractor> bowDescriptorExtractor = new BOWImgDescriptorExtractor(descriptorExtractor, descriptorMacher);
 
-	FileStorage va_fs(dataFolder + "vocab.xml", FileStorage::READ);
+	FileStorage va_fs(dataFolder + "svm/" + "vocab.xml", FileStorage::READ);
 	//如果词典存在则直接读取
 	if (va_fs.isOpened()) {
 		Mat temp_vacab;
@@ -288,7 +260,7 @@ void categoryImage(
 	for (int i = 0; i < categoryNameSize; i++) {
 		string cate_na = category_name[i];
 
-		string f_path = dataFolder + cate_na + string("SVM.xml");
+		string f_path = dataFolder + "svm/type/" + cate_na + string("SVM.xml");
 		FileStorage svm_fs(f_path, FileStorage::READ);
 		//读取SVM.xml+99
 		if (svm_fs.isOpened()) {
@@ -308,34 +280,67 @@ void categoryImage(
 			prediction_category = cate_na;
 		}
 	}
-	//将图片写入相应的文件夹下
-	directory_iterator begin_iterater(resultFolder);
-	directory_iterator end_iterator;
-	//获取该目录下的文件名
-	for (; begin_iterater != end_iterator; ++begin_iterater) {
-		if (begin_iterater->path().filename().string() == prediction_category) {
-			string filename = resultFolder + prediction_category + string("/") + trainPicName;
-			imwrite(filename, input_pic);
-		}
-	}
-	//显示输出
-	namedWindow("Dectect Object");
-	cout << "这张图属于： " << prediction_category << endl;
-	imshow("Dectect Object", result_objects[prediction_category]);
-	waitKey(0);
+	return prediction_category;
 }
 
-void categoryBySvm(string dataFolder, string testFolder) {
+void categoryBySvm(string dataFolder, string testFolder,bool flag) {
 	cout << "物体分类开始..." << endl;
 
 	directory_iterator begin_train(testFolder);
 	directory_iterator end_train;
 
+	string resultFolder = dataFolder + "/result_image/";
+	string templateFolder = dataFolder + "/templates/";
+
+	map<string, Mat> result_objects;
+	directory_iterator begin_iter(templateFolder);
+	directory_iterator end_iter;
+	//获取该目录下的所有文件名
+	for (; begin_iter != end_iter; ++begin_iter) {
+		string imageName = begin_iter->path().filename().string();
+
+		string filename = templateFolder + imageName;
+
+		int last_index = imageName.find_last_of(".");
+		string name = imageName.substr(0, last_index);
+
+		//读入模板图片
+		Mat image = imread(filename);
+		//Mat templ_image;
+		//存储原图模板
+		result_objects[name] = image;
+	}
+
+
 	for (; begin_train != end_train; ++begin_train) {
 		//获取该目录下的图片名
 		string trainPicName = (begin_train->path()).filename().string();
 		string trainPicPath = testFolder + string("/") + (begin_train->path()).filename().string();
-		categoryImage(trainPicName, trainPicPath, dataFolder);
+
+		string prediction_category = categoryImage(trainPicPath, dataFolder);
+
+		Mat input_pic = imread(trainPicPath);
+
+		//将图片写入相应的文件夹下
+		directory_iterator begin_iterater(resultFolder);
+		directory_iterator end_iterator;
+		//获取该目录下的文件名
+		for (; begin_iterater != end_iterator; ++begin_iterater) {
+			if (begin_iterater->path().filename().string() == prediction_category) {
+				string filename = resultFolder + prediction_category + string("/") + trainPicName;
+				imwrite(filename, input_pic);
+			}
+		}
+		cout << "这张图属于： " << prediction_category << endl;
+		//显示输出
+		if (flag) {
+			imshow("输入图片：", input_pic);
+
+			namedWindow("Dectect Object");
+			
+			imshow("Dectect Object", result_objects[prediction_category]);
+			waitKey(0);
+		}
 	}
 }
 
@@ -343,15 +348,22 @@ int main(void) {
 
 	int clusters = 1000;
 
-	string dataFolder = "data/";
-	string trainFolder = "data/train_images/";
-	string templateFolder = "data/templates/";
-	string testFolder = "data/test_image";
-	string resultFolder = "data/result_image/";
+	string dataFolder = "D:/project data/data/";
+	string trainFolder = "D:/project data/data/train_images/";
+	string templateFolder = "D:/project data/data/templates/";
+	string testFolder = "D:/project data/data/test_image";
+	string resultFolder = "D:/project data/data/result_image/";
+
+
+	//string dataFolder = "data/";
+	//string trainFolder = "data/train_images/";
+	//string templateFolder = "data/templates/";
+	//string testFolder = "data/test_image";
+	//string resultFolder = "data/result_image/";
 
 	train(clusters, dataFolder, trainFolder, templateFolder, testFolder, resultFolder);
 
 	//将测试图片分类
-	categoryBySvm(dataFolder, testFolder);
+	categoryBySvm(dataFolder, testFolder, true);
 	return 0;
 }
